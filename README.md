@@ -93,6 +93,55 @@ def get_logger():
     return logger
 
 
+app/views/addition.py
+
+from fastapi import APIRouter
+from app.models.request import AdditionRequest
+from app.models.response import AdditionResponse
+from app.controllers.addition_controller import perform_addition
+
+router = APIRouter()
+
+def perform_addition(addition_request: AdditionRequest) -> AdditionResponse:
+    started_at = datetime.now()
+    results = process_addition(addition_request.payload)
+    completed_at = datetime.now()
+    return AdditionResponse(
+        batchid=addition_request.batchid,
+        response=results,
+        status="complete",
+        started_at=started_at,
+        completed_at=completed_at
+    )
+
+@router.post("/add", response_model=AdditionResponse)
+async def add_numbers(addition_request: AdditionRequest):
+    return perform_addition(addition_request)
+
+ Write Unit Tests
+tests/test_addition.py
+
+from fastapi.testclient import TestClient
+from app.main import app
+from datetime import datetime
+
+client = TestClient(app)
+
+def test_add_numbers():
+    response = client.post("/add", json={"batchid": "id0101", "payload": [[1, 2], [3, 4]]})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["batchid"] == "id0101"
+    assert data["response"] == [3, 7]
+    assert data["status"] == "complete"
+    assert "started_at" in data
+    assert "completed_at" in data
+
+
+def test_add_numbers_invalid_input():
+    response = client.post("/add", json={"batchid": "id0101", "payload": [["a", "b"], [3, 4]]})
+    assert response.status_code == 422
+
 
 
 
